@@ -1,20 +1,21 @@
-<pre>&lt;!DOCTYPE html&gt;
-&lt;html&gt;
-&lt;head&gt;
-&lt;meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no"/&gt;
-&lt;title&gt;Boat Game&lt;/title&gt;
-&lt;style&gt;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Ocean Boat Game</title>
+
+<style>
     body {
         margin: 0;
         overflow: hidden;
         background: #0077ff;
-        touch-action: none;
         font-family: Arial;
+        touch-action: none;
     }
 
     canvas {
         display: block;
-        background: linear-gradient(#0099ff, #0055aa);
     }
 
     #ui {
@@ -28,9 +29,9 @@
     button {
         width: 120px;
         height: 80px;
-        font-size: 24px;
-        border-radius: 15px;
+        font-size: 30px;
         border: none;
+        border-radius: 15px;
         background: rgba(255,255,255,0.7);
     }
 
@@ -41,111 +42,119 @@
         color: white;
         font-size: 20px;
     }
-&lt;/style&gt;
-&lt;/head&gt;
+</style>
+</head>
 
-&lt;body&gt;
-&lt;canvas id="game"&gt;&lt;/canvas&gt;
+<body>
 
-&lt;div id="score"&gt;Score: 0&lt;/div&gt;
+<canvas id="c"></canvas>
+<div id="score">Score: 0</div>
 
-&lt;div id="ui"&gt;
-    &lt;button onclick="left()"&gt;⬅️&lt;/button&gt;
-    &lt;button onclick="right()"&gt;➡️&lt;/button&gt;
-&lt;/div&gt;
+<div id="ui">
+    <button ontouchstart="moveLeft()">⬅️</button>
+    <button ontouchstart="moveRight()">➡️</button>
+</div>
 
-&lt;script&gt;
-const canvas = document.getElementById("game");
+<script>
+const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let boat = {
-    x: canvas.width/2,
-    y: canvas.height - 120,
+// Boat stays centered
+const boat = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
     w: 40,
-    h: 70,
-    speed: 15
+    h: 70
 };
 
-let rocks = [];
+let offsetX = 0;
+let speed = 6;
+
+let obstacles = [];
 let score = 0;
 let gameOver = false;
 
-function spawnRock() {
-    rocks.push({
-        x: Math.random() * (canvas.width - 50),
+function spawn() {
+    obstacles.push({
+        x: Math.random() * canvas.width,
         y: -50,
-        w: 40,
-        h: 40,
-        speed: 4 + Math.random() * 3
+        w: 50,
+        h: 50,
+        s: 3 + Math.random() * 3
     });
 }
 
-setInterval(spawnRock, 800);
+setInterval(spawn, 800);
 
-function left() {
-    boat.x -= boat.speed;
+function moveLeft() {
+    offsetX += speed;
 }
 
-function right() {
-    boat.x += boat.speed;
+function moveRight() {
+    offsetX -= speed;
+}
+
+function drawWater() {
+    ctx.fillStyle = "#0077ff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    for (let i = 0; i < canvas.height; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(canvas.width, i);
+        ctx.stroke();
+    }
 }
 
 function drawBoat() {
     ctx.fillStyle = "yellow";
-    ctx.fillRect(boat.x, boat.y, boat.w, boat.h);
+    ctx.fillRect(
+        boat.x - boat.w / 2,
+        boat.y - boat.h / 2,
+        boat.w,
+        boat.h
+    );
 }
 
-function drawRocks() {
+function drawObstacles() {
     ctx.fillStyle = "brown";
-    rocks.forEach(r =&gt; {
-        ctx.fillRect(r.x, r.y, r.w, r.h);
-    });
-}
 
-function updateRocks() {
-    rocks.forEach(r =&gt; {
-        r.y += r.speed;
+    for (let o of obstacles) {
+        let sx = o.x + offsetX;
+
+        ctx.fillRect(sx, o.y, o.w, o.h);
 
         // collision
         if (
-            boat.x &lt; r.x + r.w &amp;&amp;
-            boat.x + boat.w &gt; r.x &amp;&amp;
-            boat.y &lt; r.y + r.h &amp;&amp;
-            boat.y + boat.h &gt; r.y
+            sx < boat.x + boat.w / 2 &&
+            sx + o.w > boat.x - boat.w / 2 &&
+            o.y < boat.y + boat.h / 2 &&
+            o.y + o.h > boat.y - boat.h / 2
         ) {
             gameOver = true;
         }
-    });
 
-    rocks = rocks.filter(r =&gt; r.y &lt; canvas.height + 50);
-}
+        o.y += o.s;
+    }
 
-function drawOcean() {
-    ctx.fillStyle = "#0077ff";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-}
-
-function drawGameOver() {
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
+    obstacles = obstacles.filter(o => o.y < canvas.height + 100);
 }
 
 function loop() {
     if (gameOver) {
-        drawGameOver();
+        ctx.fillStyle = "white";
+        ctx.font = "40px Arial";
+        ctx.fillText("GAME OVER", canvas.width/2 - 120, canvas.height/2);
         return;
     }
 
-    drawOcean();
-
-    updateRocks();
-
+    drawWater();
     drawBoat();
-    drawRocks();
+    drawObstacles();
 
     score++;
     document.getElementById("score").innerText = "Score: " + score;
@@ -154,7 +163,7 @@ function loop() {
 }
 
 loop();
-&lt;/script&gt;
+</script>
 
-&lt;/body&gt;
-&lt;/html&gt;</pre>
+</body>
+</html>
